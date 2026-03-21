@@ -1,0 +1,23 @@
+# Secrets & credentials — NEVER commit these
+.env
+
+# Telethon session files (contain auth tokens)
+*.session
+*.session-journal
+
+# SQLite database (user data)
+bot_database.db
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
