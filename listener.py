@@ -4,12 +4,13 @@ listener.py — Telethon user-client that monitors a Telegram channel for
               to registered users via the bot client.
 
 Event classification (priority order):
-  "התרעה מקדימה"          → Event: "התרעה מקדימה",  Emoji: 🟠
-  "טילים" OR "רקטות"      → Event: "ירי טילים",      Emoji: 🔴
-  "הסתיים" OR "חזרה לשגרה"→ Event: "האירוע הסתיים", Emoji: 🟢
-  (default)                → Event: "התרעה",          Emoji: 🟡
+  "בדקות הקרובות צפויות להתקבל התרעות באזורך" → Event: "התרעה מקדימה",         Emoji: 🟠
+  "ירי רקטות וטילים"                           → Event: "ירי רקטות וטילים",     Emoji: 🔴
+  "חדירת כלי טיס עוין"                         → Event: "חדירת כלי טיס עוין",  Emoji: ✈️
+  "האירוע הסתיים"                              → Event: "האירוע הסתיים",        Emoji: 🟢
+  (default)                                    → Event: "התרעה",                Emoji: 🟡
 
-Message format: "{Emoji} {location1}, {location2} {Event}"
+Message format: "{Emoji} {location1}, {location2} — {Event}"
 """
 
 import os
@@ -23,12 +24,14 @@ logger = logging.getLogger(__name__)
 
 
 def _classify_message(text: str) -> tuple[str, str]:
-    """Return (emoji, event_name) based on message keywords."""
-    if "התרעה מקדימה" in text:
+    """Return (emoji, event_name) based on exact Pikud HaOref message keywords."""
+    if "בדקות הקרובות צפויות להתקבל התרעות באזורך" in text:
         return "🟠", "התרעה מקדימה"
-    if "טילים" in text or "רקטות" in text:
-        return "🔴", "ירי טילים"
-    if "הסתיים" in text or "חזרה לשגרה" in text:
+    if "ירי רקטות וטילים" in text:
+        return "🔴", "ירי רקטות וטילים"
+    if "חדירת כלי טיס עוין" in text:
+        return "✈️", "חדירת כלי טיס עוין"
+    if "האירוע הסתיים" in text:
         return "🟢", "האירוע הסתיים"
     return "🟡", "התרעה"
 
@@ -64,7 +67,7 @@ def setup_listener(
 
             # Explicit join — never passes a raw list into the f-string
             locations_str = ", ".join(matched_locations)
-            notification = f"{emoji} {locations_str} {event_name}"
+            notification = f"{emoji} {locations_str} — {event_name}"
 
             try:
                 await bot_client.send_message(chat_id, notification)

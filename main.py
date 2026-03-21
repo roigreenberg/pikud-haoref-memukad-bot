@@ -35,18 +35,30 @@ async def main() -> None:
     logger.info("Initialising database...")
     await init_db()
 
-    # Bot client — uses bot_token, handles user interactions
+    # Bot client — authenticated as a bot via BOT_TOKEN
     bot = create_bot_client(api_id, api_hash, bot_token)
 
-    # Listener client — uses user credentials, monitors the target channel
+    # Listener client — authenticated as a user, monitors the target channel
     listener = TelegramClient("listener", api_id, api_hash)
 
-    # Register the channel listener; it sends messages through the bot client
+    # Register the channel listener; notifications are sent via the bot client
     setup_listener(listener, bot)
 
-    logger.info("Starting bot and listener clients...")
-    async with bot, listener:
+    # ---------------------------------------------------------------------------
+    # Start explicitly in the right order:
+    #   1. Bot MUST be started with its token first.
+    #   2. Listener (user auth) starts second.
+    #
+    # We intentionally avoid `async with bot, listener:` because Telethon's
+    # __aenter__ calls .start() with no arguments, which would try to
+    # authenticate the bot as a user account — causing alerts to arrive
+    # from your personal account instead of the bot.
+    # ---------------------------------------------------------------------------
+    try:
+        logger.info("Starting bot client (bot token auth)...")
         await bot.start(bot_token=bot_token)
+
+        logger.info("Starting listener client (user auth)...")
         await listener.start()
 
         logger.info("Both clients are running. Press Ctrl+C to stop.")
@@ -54,6 +66,9 @@ async def main() -> None:
             bot.run_until_disconnected(),
             listener.run_until_disconnected(),
         )
+    finally:
+        await bot.disconnect()
+        await listener.disconnect()
 
 
 if __name__ == "__main__":

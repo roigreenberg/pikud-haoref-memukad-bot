@@ -7,7 +7,7 @@ Handler table:
   /start (new user, no code)→ silent drop (fast-fail)
   /edit (registered)        → prompt for new location list
   /list (registered)        → return bare comma-joined location string
-  <comma-separated text>    → parse, strip, save locations to DB
+  <text while awaiting>     → parse (comma-separated OR single location), save to DB
   <any other> (unregistered)→ silent drop (fast-fail)
 """
 
@@ -45,8 +45,8 @@ def create_bot_client(api_id: int, api_hash: str, bot_token: str) -> TelegramCli
             _awaiting_locations.add(chat_id)
             await event.respond(
                 "ברוך שובך! 👋\n"
-                "שלח/י רשימת יישובים מופרדים בפסיקים כדי לעדכן את המיקומים שלך.\n"
-                "לדוגמה: `תל אביב, רמת גן, פתח תקווה`"
+                "שלח/י יישוב אחד או רשימה מופרדת בפסיקים כדי לעדכן את המיקומים שלך.\n"
+                "לדוגמה: `תל אביב` או `תל אביב, רמת גן, פתח תקווה`"
             )
             raise events.StopPropagation
 
@@ -61,8 +61,8 @@ def create_bot_client(api_id: int, api_hash: str, bot_token: str) -> TelegramCli
         _awaiting_locations.add(chat_id)
         await event.respond(
             "ברוך הבא! ✅ נרשמת בהצלחה.\n"
-            "שלח/י רשימת יישובים מופרדים בפסיקים כדי לקבל התרעות.\n"
-            "לדוגמה: `תל אביב, רמת גן, פתח תקווה`"
+            "שלח/י יישוב אחד או רשימה מופרדת בפסיקים כדי לקבל התרעות.\n"
+            "לדוגמה: `תל אביב` או `תל אביב, רמת גן, פתח תקווה`"
         )
         raise events.StopPropagation
 
@@ -75,7 +75,7 @@ def create_bot_client(api_id: int, api_hash: str, bot_token: str) -> TelegramCli
 
         _awaiting_locations.add(chat_id)
         await event.respond(
-            "שלח/י רשימת יישובים חדשה מופרדת בפסיקים וזה יחליף את הרשימה הקיימת."
+            "שלח/י יישוב אחד או רשימה מופרדת בפסיקים — זה יחליף את הרשימה הקיימת."
         )
         raise events.StopPropagation
 
@@ -103,17 +103,14 @@ def create_bot_client(api_id: int, api_hash: str, bot_token: str) -> TelegramCli
         if not await is_registered(chat_id):
             return
 
-        # Only update locations when the user is in the flow AND message has commas
-        if chat_id in _awaiting_locations and "," in text:
+        # Accept any non-empty text while user is in the location-entry flow.
+        # Split by comma if present; otherwise treat the whole message as one location.
+        if chat_id in _awaiting_locations and text:
             locations = [loc.strip() for loc in text.split(",") if loc.strip()]
             await set_locations(chat_id, locations)
             _awaiting_locations.discard(chat_id)
             await event.respond(
                 f"✅ המיקומים עודכנו: {', '.join(locations)}"
-            )
-        elif chat_id in _awaiting_locations:
-            await event.respond(
-                "נא לשלוח רשימה מופרדת בפסיקים, לדוגמה: `תל אביב, רמת גן`"
             )
 
     return bot
