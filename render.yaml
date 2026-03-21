@@ -1,0 +1,25 @@
+services:
+  - type: worker
+    name: pikud-haoref-bot
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    disk:
+      name: bot-storage
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: PRODUCTION
+        value: "true"
+      - key: API_ID
+        sync: false
+      - key: API_HASH
+        sync: false
+      - key: BOT_TOKEN
+        sync: false
+      - key: SECRET_INVITE_CODE
+        sync: false
+      - key: TARGET_CHANNEL
+        sync: false
+      - key: SESSION_STRING
+        sync: false

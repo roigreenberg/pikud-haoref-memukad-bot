@@ -3,9 +3,13 @@ database.py — Async SQLite persistence layer using aiosqlite.
 """
 
 import json
+import os
+
 import aiosqlite
 
-DB_PATH = "bot_database.db"
+# In production (PRODUCTION=true) the DB lives on the persistent Render disk.
+# Locally it's written next to the source code for convenience.
+DB_PATH = "/data/bot_database.db" if os.environ.get("PRODUCTION") == "true" else "bot_database.db"
 
 
 async def init_db() -> None:
