@@ -39,17 +39,19 @@ async def main() -> None:
     # Bot client — authenticated as a bot via BOT_TOKEN
     bot = create_bot_client(api_id, api_hash, bot_token)
 
-    # Listener client — authenticated as a user, monitors the target channel.
-    # Prefer a StringSession (env var) so no .session file is needed on cloud.
+    # Listener client.
+    # • If SESSION_STRING env var is set → use it (ideal for cloud, no file needed).
+    # • Otherwise → fall back to the existing file-based "listener" session.
     session_string: str = os.environ.get("SESSION_STRING", "").strip()
-    using_string_session = bool(session_string)
 
-    if using_string_session:
+    if session_string:
         logger.info("Using StringSession from SESSION_STRING env var.")
         listener = TelegramClient(StringSession(session_string), api_id, api_hash)
+        is_file_session = False
     else:
         logger.info("SESSION_STRING not set — using file-based 'listener' session.")
         listener = TelegramClient("listener", api_id, api_hash)
+        is_file_session = True
 
     # Register the channel listener; notifications are sent via the bot client
     setup_listener(listener, bot)
@@ -66,15 +68,23 @@ async def main() -> None:
         logger.info("Starting listener client (user auth)...")
         await listener.start()
 
-        # After a fresh file-based login, print the session string so you can
-        # copy it into SESSION_STRING for future deployments (avoids re-auth).
-        if not using_string_session:
-            saved = listener.session.save()
-            if saved:
-                print("\n" + "=" * 60)
-                print("SESSION STRING (save this for cloud deployments):")
-                print(saved)
-                print("=" * 60 + "\n")
+        # After a file-based login, export and print the session string so it
+        # can be set as SESSION_STRING for cloud / future runs (no re-auth).
+        # SQLiteSession.save() writes to disk and returns None, so we build a
+        # temporary StringSession from the live session's auth data instead.
+        if is_file_session:
+            tmp = StringSession()
+            tmp.set_dc(
+                listener.session.dc_id,
+                listener.session.server_address,
+                listener.session.port,
+            )
+            tmp.auth_key = listener.session.auth_key
+            saved = tmp.save()
+            print("\n" + "=" * 60)
+            print("SESSION STRING (copy this into your SESSION_STRING env var):")
+            print(saved)
+            print("=" * 60 + "\n")
 
         logger.info("Both clients are running. Press Ctrl+C to stop.")
         await asyncio.gather(
