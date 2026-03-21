@@ -1,3 +1,4 @@
 telethon
-aiosqlite
+sqlmodel
+psycopg[binary]
 python-dotenv

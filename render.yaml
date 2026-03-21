@@ -23,3 +23,5 @@ services:
         sync: false
       - key: SESSION_STRING
         sync: false
+      - key: DATABASE_URL
+        sync: false
