@@ -2,3 +2,4 @@ telethon
 sqlmodel
 psycopg[binary]
 python-dotenv
+aiohttp

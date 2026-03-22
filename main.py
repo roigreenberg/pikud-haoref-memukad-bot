@@ -1,12 +1,13 @@
 """
-main.py — Entry point. Loads environment, initialises DB, and runs both
-           the bot client (BotClient) and the user listener client concurrently.
+main.py — Entry point. Loads environment, initialises DB, and runs the bot
+           client, listener client, and a health-check web server concurrently.
 """
 
 import asyncio
 import logging
 import os
 
+from aiohttp import web
 from dotenv import load_dotenv
 from telethon import TelegramClient
 from telethon.sessions import StringSession
@@ -23,6 +24,24 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+async def _health_handler(request: web.Request) -> web.Response:
+    return web.Response(text="OK")
+
+
+async def _run_health_server() -> None:
+    """Minimal HTTP server for Koyeb / Render health checks."""
+    port = int(os.environ.get("PORT", 8000))
+    app = web.Application()
+    app.router.add_get("/", _health_handler)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    logger.info("Health-check server listening on 0.0.0.0:%s", port)
+    # Keep running until cancelled
+    await asyncio.Event().wait()
 
 
 async def main() -> None:
@@ -86,10 +105,11 @@ async def main() -> None:
             print(saved)
             print("=" * 60 + "\n")
 
-        logger.info("Both clients are running. Press Ctrl+C to stop.")
+        logger.info("All services are running. Press Ctrl+C to stop.")
         await asyncio.gather(
             bot.run_until_disconnected(),
             listener.run_until_disconnected(),
+            _run_health_server(),
         )
     finally:
         await bot.disconnect()
@@ -97,4 +117,14 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import sys
+    import selectors
+
+    if sys.platform == "win32":
+        asyncio.run(
+            main(), 
+            loop_factory=lambda: asyncio.SelectorEventLoop(selectors.SelectSelector())
+        )
+    else:
+        # בשרת (Linux) הכל יעבוד כרגיל
+        asyncio.run(main())
