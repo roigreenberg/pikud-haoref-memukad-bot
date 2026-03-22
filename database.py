@@ -16,6 +16,8 @@ import os
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy import BigInteger, Column
+from sqlalchemy.dialects.postgresql import JSONB # better for Postgres
 from sqlmodel import Field, SQLModel, select
 
 # ---------------------------------------------------------------------------
@@ -24,8 +26,10 @@ from sqlmodel import Field, SQLModel, select
 
 class User(SQLModel, table=True):
     """One row per registered Telegram user."""
-    chat_id: int = Field(primary_key=True)
-    locations: str = Field(default="[]")  # JSON-encoded list[str]
+    chat_id: int = Field(
+        sa_column=Column(BigInteger(), primary_key=True, autoincrement=False)
+    )
+    locations: list[str] = Field(default=[], sa_column=Column(JSONB))
 
 
 # ---------------------------------------------------------------------------
