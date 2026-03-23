@@ -1,4 +1,5 @@
 """
+
 database.py — PostgreSQL persistence layer using SQLModel + async SQLAlchemy.
 
 The async engine is created lazily on first use (after load_dotenv() runs in
@@ -11,7 +12,6 @@ the "postgresql+psycopg://" format required by psycopg3 + SQLAlchemy.
 No raw SQL strings. All queries use SQLModel's ORM select().
 """
 
-import json
 import os
 from typing import Optional
 
@@ -82,16 +82,16 @@ async def register_user(chat_id: int) -> None:
     async with _get_session_factory()() as session:
         existing = await session.get(User, chat_id)
         if existing is None:
-            session.add(User(chat_id=chat_id, locations="[]"))
+            session.add(User(chat_id=chat_id, locations=[]))
             await session.commit()
 
 
 async def set_locations(chat_id: int, locations: list[str]) -> None:
-    """Persist a JSON-encoded list of locations for the given user."""
+    """Persist the list of locations as JSONB for the given user."""
     async with _get_session_factory()() as session:
         user = await session.get(User, chat_id)
         if user is not None:
-            user.locations = json.dumps(locations)
+            user.locations = locations
             session.add(user)
             await session.commit()
 
@@ -102,7 +102,7 @@ async def get_locations(chat_id: int) -> list[str]:
         user = await session.get(User, chat_id)
         if user is None:
             return []
-        return json.loads(user.locations)
+        return user.locations
 
 
 async def get_all_users() -> list[tuple[int, list[str]]]:
@@ -110,4 +110,4 @@ async def get_all_users() -> list[tuple[int, list[str]]]:
     async with _get_session_factory()() as session:
         result = await session.execute(select(User))
         users = result.scalars().all()
-        return [(u.chat_id, json.loads(u.locations)) for u in users]
+        return [(u.chat_id, u.locations) for u in users]
