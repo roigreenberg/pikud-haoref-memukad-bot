@@ -117,7 +117,7 @@ def setup_listener(
             area_match = re.search(r"מרחב:\s*(.*)", message_text)
             focus_match = re.search(r"מיקוד:\s*(.*)", message_text)
             threat_count_match = re.search(r"מספר איומים:\s*(.*)", message_text)
-            eta_match = re.search(r"צפי הגעה:\s*(.*)", message_text)
+            eta_match = re.search(r"צפי הגעה:\s*([\d: -]+)", message_text)
 
             if issuer_match and area_match and eta_match:
                 issuer = issuer_match.group(1).strip()
@@ -127,7 +127,7 @@ def setup_listener(
                 eta = eta_match.group(1).strip()
 
                 summary_msg = (
-                    f"{issuer} 🚀 -> {area} ({focus}) | ⏰ {eta} | איומים: {threat_count}\n\n"
+                    f"{issuer} -> {area} ({focus}) | {eta} | איומים: {threat_count}\n\n"
                     f"_*מידע משוער בלבד, יש להישמע להנחיות פיקוד העורף.*_"
                 )
 
